@@ -1,0 +1,41 @@
+import pandas as pd 
+import ast
+from ast import literal_eval
+import numpy as np
+from pandas import DataFrame
+
+file = "5 samples.csv"
+
+df = pd.read_csv(file, header= 0, quotechar='"', sep=',', encoding = "ISO-8859-1",keep_default_na=True, 
+                 dtype = { 'belongs_to_collection' : 'category',  'genres' : 'category', 'original_language' : 'category', 'production_companies' : 'category', 'production_countries' : 'category',  'spoken_languages' : 'category', 'Keywords' : 'category', 'cast' : 'category', 'crew' : 'category'}
+)
+
+dataList = { 'belongs_to_collection',  'genres', 'production_companies', 'production_countries',  'spoken_languages', 'Keywords', 'cast', 'crew'}
+dataID = { 'belongs_to_collection' : 'id',  'genres': 'id', 'production_companies': 'id', 'production_countries': 'iso_3166_1',  'spoken_languages': 'iso_639_1', 'Keywords': 'id', 'cast': 'id', 'crew': 'id'}
+    
+for col in dataList :
+    df[col] = df[col].cat.add_categories('[]')
+    df[col].fillna( '[]' , inplace = True) 
+
+for col in dataList :
+    df[[col]] = df[[col]].applymap(literal_eval)     
+    
+
+    
+for col in dataList : 
+    print(col)
+    #print(dataID[col])
+    for row in range(len(df)) :
+        for num in range(len(df[col][row])) :
+            if not (isinstance(df[col][row][num], int) or isinstance(df[col][row][num], str)):
+                df[col][row][num] = df[col][row][num][dataID[col]]
+
+uniqueSpokenLanguage = df['spoken_languages'].apply(pd.Series).stack().value_counts().keys().values.tolist()
+for row in range(len(df)) :
+    for num in range(len(df['spoken_languages'][row])):
+        df['spoken_languages'][row][num] = uniqueSpokenLanguage.index(df.spoken_languages[row][num])
+        
+#uniqueLanguage = df.original_language.unique()
+df.original_language = df.original_language.replace(uniqueSpokenLanguage,range(len(uniqueSpokenLanguage)))
+
+df.head()
