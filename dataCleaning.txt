@@ -4,7 +4,7 @@ from ast import literal_eval
 import numpy as np
 from pandas import DataFrame
 
-file = "5 samples.csv"
+file = "train.csv"
 
 df = pd.read_csv(file, header= 0, quotechar='"', sep=',', encoding = "ISO-8859-1",keep_default_na=True, 
                  dtype = { 'belongs_to_collection' : 'category',  'genres' : 'category', 'original_language' : 'category', 'production_companies' : 'category', 'production_countries' : 'category',  'spoken_languages' : 'category', 'Keywords' : 'category', 'cast' : 'category', 'crew' : 'category'}
@@ -14,7 +14,10 @@ dataList = { 'belongs_to_collection',  'genres', 'production_companies', 'produc
 dataID = { 'belongs_to_collection' : 'id',  'genres': 'id', 'production_companies': 'id', 'production_countries': 'iso_3166_1',  'spoken_languages': 'iso_639_1', 'Keywords': 'id', 'cast': 'id', 'crew': 'id'}
     
 for col in dataList :
-    df[col] = df[col].cat.add_categories('[]')
+    try:
+        df[col] = df[col].cat.add_categories('[]',inplace = False)
+    except:
+        pass
     df[col].fillna( '[]' , inplace = True) 
 
 for col in dataList :
