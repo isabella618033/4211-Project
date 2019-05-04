@@ -1,0 +1,16 @@
+must download both Cleaning the Crew.ipynb, CleaningFunctions.py to work
+and I have made multithread proccessing avaliable to reduce the running time from 15 mins to ~30 sec!!! SO NICE!!!
+#dropping the columns that was not needed
+#filling empty list with []
+#changing a string of list into list
+#changing the dict in the list into ID only
+# getting all unique values
+# adding the extra columns for the most related crew (improved on timing!!!)
+#changing the time into numerical value (improved on timing!!!)
+# save to save.csv
+#dropping the extra columns that was already extracted
+#creating df df_pred to do prediction for those with non-nan values > 2000
+#cause knn dosent accept a string heading, so changng the heading
+# KNN avaliable
+#adding back the columns for df_pred
+#merging df with df_pred
