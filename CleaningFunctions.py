@@ -50,14 +50,20 @@ def Getting3MostRelated(df,col):
                 for id in df[col][x]:
                     sub_var.update({id : var[id]}) # get the list of variance for each crew in this cell
                 #print(sub_var)
+                min_item = []
+                for a in range(3):
+                    if(len(sub_var)>0):
+                        min_item.append(min(sub_var.keys(), key=(lambda k: sub_var[k])))
+                        sub_var.pop(min_item[a])     
+                    else:
+                        min_item .append(np.nan)
+                
+                min_item.sort()
+                
                 for a in range(3):
                     name = col +str(a)
-                    if(len(sub_var)>0):
-                        min_item = min(sub_var.keys(), key=(lambda k: sub_var[k]))
-                        df_temp[name][x] = float(min_item)
-                        sub_var.pop(min_item)
-                    else:
-                        df_temp[name][x] = np.nan
+                    df_temp[name][x] = float(min_item[a])
+
     return df_temp, col
 
 def job(num):
