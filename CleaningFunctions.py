@@ -30,6 +30,12 @@ col_Hit = ['id', 'genres0_mean', 'genres0_var', 'genres1_mean', 'genres1_var','K
        'cast2_mean', 'cast2_var', 'crew0_mean', 'crew0_var', 'crew1_mean',
        'crew1_var', 'crew2_mean', 'crew2_var']
 
+col_Hit_sub = ['genres0', 'genres1','Keywords0',
+        'Keywords1',  'Keywords2',
+        'cast0', 'cast1', 
+       'cast2',  'crew0', 'crew1',
+        'crew2']
+
 dataList = [ 'belongs_to_collection',  'genres', 'production_companies', 'production_countries',  'spoken_languages', 'Keywords', 'cast', 'crew']
 
 dataList_expendsize = { 'belongs_to_collection':1,  'genres':3, 'production_companies':3, 'production_countries':3,  'spoken_languages':3, 'Keywords':3, 'cast':3, 'crew':3}
@@ -37,7 +43,11 @@ dataList_expendsize = { 'belongs_to_collection':1,  'genres':3, 'production_comp
 orgDF = pd.read_csv('save_ORG.csv')
 
 for col in dataList :
-    orgDF[[col]] = orgDF[[col]].applymap(literal_eval)     
+    orgDF[[col]] = orgDF[[col]].applymap(literal_eval)    
+    
+PerformanceDF = pd.read_csv('Performance.csv')
+PerformanceDF["mean"] = PerformanceDF["mean"].astype(float)
+PerformanceDF["var"] = round(PerformanceDF["var"],0)
 
 
 def worker(x):
@@ -65,10 +75,12 @@ def Getting3MostRelated(df,col):
             sub_var = []
             if not isinstance(df[col][x], float): #if the df is not nan for col,x
                 for id in df[col][x]:
-                    print(col+str(id))
-                    if(col+str(id) in SearchList):
-                        index = SearchList.index(col+str(id))
-                        sub_var.append([Performance["mean"][index],Performance["var"][index]]) 
+                    
+                    index = PerformanceDF.loc[(PerformanceDF['col'] == col) & (PerformanceDF['id'] == id) ].index
+                    print(index)
+                    if not (len(index) == 0):
+                        print(index[0])
+                        sub_var.append([Performance["mean"][index[0]],Performance["var"][index[0]]]) 
                     # get the list of variance for each crew in this cell
                     
                 sub_var = sorted(sub_var, key=takeSecond)
@@ -118,21 +130,33 @@ def time2num(df, count):
     return df.release_date[count]
 
 def hitRate(predDF, std_scale_fullset,col_Hit):
-    return 0
+    
     winsound.Beep(1800, 1000)
     cols = predDF.columns 
-    predDF = pd.DataFrame(std_scale_fullset.inverse_transform(predDF), columns = cols) [col_Hit]
+    predDF = pd.DataFrame(std_scale_fullset.inverse_transform(predDF), columns = cols)
+
+    predDF = predDF[col_Hit]
     predDF.rename(columns={"id": "id0"}, inplace=True)
-    predDF = predDF.astype(int)
+    predDF = round(predDF,0)
+    print(predDF.head())
+    print(PerformanceDF.head())
     hit = 0
     count = 0
-    colist = col_Hit[1:]
+    colist = col_Hit_sub
     for col in colist:
+        #predDF[col+"_var"] = round(predDF[col+"_var"],0)
         for x in range(len(predDF)):
-            if predDF[col][x] in orgDF[col[:-1]][orgDF["id"].tolist().index(predDF["id0"][x])]:
-                hit +=1
+            TargetID = PerformanceDF.loc[(PerformanceDF['mean'] == predDF[col+"_mean"][x]) & 
+                                         (PerformanceDF['var'] == predDF[col+"_var"][x])&                     
+                                         (PerformanceDF['col']==col)].index
+            flag = 0
+            for id in TargetID:
+                if id in orgDF[col[:-1]][orgDF["id"].tolist().index(id)]:
+                    flag = 1
+            hit = hit + flag
             count +=1
     return hit / count
+
 
 def PredictingMethodVerfication(df_complete, missing_rate_list,std_scale_fullset,tup):
     winsound.Beep(1800, 1000)
@@ -148,7 +172,7 @@ def PredictingMethodVerfication(df_complete, missing_rate_list,std_scale_fullset
     rmsAll_list = []
     hit_list = []
 
-    for k in range(10):
+    for k in range(5):
         df_predicted = pd.DataFrame(KNN(k,verbose=False).fit_transform(df_complete_sampled))
         
         df_predicted.columns  = df_complete.columns 
