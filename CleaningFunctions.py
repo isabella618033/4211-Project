@@ -5,6 +5,7 @@ import numpy as np
 from pandas import DataFrame
 from IPython.display import display, clear_output
 import math
+import statistics
 
 from datetime import datetime
 from dateutil.parser import parse
@@ -18,13 +19,20 @@ import matplotlib.pyplot as plt
 import winsound
 
 col_Mse = ['id', 'budget', 'original_language', 'popularity', 'release_date',
-       'runtime', 'production_companies0',
-        'production_countries0', 'spoken_languages0']
+       'runtime', 
+       'production_companies0_mean', 'production_companies0_var',
+       'production_countries0_mean', 'production_countries0_var',
+       'spoken_languages0_mean', 'spoken_languages0_var', ]
            
-col_Hit = ['id', 'genres0', 'genres1','Keywords0', 'Keywords1', 'Keywords2', 'cast0', 'cast1', 'cast2',
-       'crew0', 'crew1', 'crew2']
+col_Hit = ['id', 'genres0_mean', 'genres0_var', 'genres1_mean', 'genres1_var','Keywords0_mean',
+       'Keywords0_var', 'Keywords1_mean', 'Keywords1_var', 'Keywords2_mean',
+       'Keywords2_var', 'cast0_mean', 'cast0_var', 'cast1_mean', 'cast1_var',
+       'cast2_mean', 'cast2_var', 'crew0_mean', 'crew0_var', 'crew1_mean',
+       'crew1_var', 'crew2_mean', 'crew2_var']
 
 dataList = [ 'belongs_to_collection',  'genres', 'production_companies', 'production_countries',  'spoken_languages', 'Keywords', 'cast', 'crew']
+
+dataList_expendsize = { 'belongs_to_collection':1,  'genres':3, 'production_companies':3, 'production_countries':3,  'spoken_languages':3, 'Keywords':3, 'cast':3, 'crew':3}
 
 orgDF = pd.read_csv('save_ORG.csv')
 
@@ -35,55 +43,49 @@ for col in dataList :
 def worker(x):
     return x*x
 
-def Getting3MostRelated(df,col):
-    df_temp = pd.DataFrame()
-    print(col)
-    #collect all revenue for each crew
-    Rev_List = {}
-    for x in range(len(df)):
-        if not (isinstance(df[col][x], float )):
-            for y in range( len(df[col][x])):
-                if (df[col][x][y] not in Rev_List):
-                    list = []
-                    Rev_List.update( {df[col][x][y]: list} )
-                Rev_List[df[col][x][y]].append(df["revenue"][x])
-                
-    #calculate the variance of revenue for each crew
-    var = {}
-    for id in Rev_List.keys():
-        if (len(Rev_List[id]) > 2):
-            var.update({id : np.var(Rev_List[id])})
-        else : 
-            var.update({id : np.nan})
+def takeSecond(elem):
+    return elem[1]
+
+def Getting3MostRelated(df,col):           
+    
+    Performance = pd.read_csv('Performance.csv')
 
     #creat the 3 new columns
     length = len(df)
-    data = {col+str(0):range(length), col+str(1):range(length),col+str(2):range(length)} 
+    data = {}
+    for a in range(dataList_expendsize[col]):
+        data.update({col+str(a)+"_mean":range(length), col+str(a)+"_var":range(length)})
+ 
     df_temp = pd.DataFrame(data) 
 
     # get the value for each 3 columns
+    SearchList = Performance["id"].tolist()
     for x in range(len(df)):
         if (True): #lol
             sub_var = []
-            #print(x, col, df[col][x], type(df[col][x]),isinstance(df[col][x], float))
             if not isinstance(df[col][x], float): #if the df is not nan for col,x
-                #print("len(df[col][x])",len(df[col][x]))
                 for id in df[col][x]:
-                    sub_var.append(var[id]) # get the list of variance for each crew in this cell
-                #print(sub_var)
+                    print(col+str(id))
+                    if(col+str(id) in SearchList):
+                        index = SearchList.index(col+str(id))
+                        sub_var.append([Performance["mean"][index],Performance["var"][index]]) 
+                    # get the list of variance for each crew in this cell
+                    
+                sub_var = sorted(sub_var, key=takeSecond)
+                
                 min_item = []
-                for a in range(3):
+                for a in range(dataList_expendsize[col]):
                     if(len(sub_var)>0):
-                        min_item.append(min(sub_var))
-                        sub_var.remove(min_item[a])     
+                        min_item.append(sub_var[0])
+                        sub_var.remove(sub_var[0])     
                     else:
-                        min_item .append(np.nan)
-                
-                min_item.sort()
-                
-                for a in range(3):
-                    name = col +str(a)
-                    df_temp[name][x] = float(min_item[a])
+                        min_item .append([np.nan,np.nan])
+
+                for count in range(len(min_item)):
+                    name = col +str(count)
+
+                    df_temp[name+"_mean"][x] = min_item[count][0]
+                    df_temp[name+"_var"][x] = min_item[count][1]
 
     return df_temp, col
 
@@ -116,6 +118,7 @@ def time2num(df, count):
     return df.release_date[count]
 
 def hitRate(predDF, std_scale_fullset,col_Hit):
+    return 0
     winsound.Beep(1800, 1000)
     cols = predDF.columns 
     predDF = pd.DataFrame(std_scale_fullset.inverse_transform(predDF), columns = cols) [col_Hit]
