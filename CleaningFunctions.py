@@ -16,6 +16,8 @@ from sklearn.metrics import mean_squared_error
 from fancyimpute import KNN 
 import matplotlib.pyplot as plt
 
+from numpy import *
+
 import winsound
 
 col_Mse = ['id', 'budget', 'original_language', 'popularity', 'release_date',
@@ -77,9 +79,8 @@ def Getting3MostRelated(df,col):
                 for id in df[col][x]:
                     
                     index = PerformanceDF.loc[(PerformanceDF['col'] == col) & (PerformanceDF['id'] == id) ].index
-                    print(index)
                     if not (len(index) == 0):
-                        print(index[0])
+                        
                         sub_var.append([Performance["mean"][index[0]],Performance["var"][index[0]]]) 
                     # get the list of variance for each crew in this cell
                     
@@ -129,7 +130,7 @@ def time2num(df, count):
             df.release_date[count] = (df.release_date[count].year-1900)*365.25 + (df.release_date[count].month-1)*(365.25/12)+(df.release_date[count].day-1)
     return df.release_date[count]
 
-def hitRate(predDF, std_scale_fullset,col_Hit):
+def hitRate(predDF,df_complete_sampled, std_scale_fullset,col_Hit):
     
     winsound.Beep(1800, 1000)
     cols = predDF.columns 
@@ -138,23 +139,24 @@ def hitRate(predDF, std_scale_fullset,col_Hit):
     predDF = predDF[col_Hit]
     predDF.rename(columns={"id": "id0"}, inplace=True)
     predDF = round(predDF,0)
-    print(predDF.head())
-    print(PerformanceDF.head())
     hit = 0
     count = 0
     colist = col_Hit_sub
     for col in colist:
-        #predDF[col+"_var"] = round(predDF[col+"_var"],0)
         for x in range(len(predDF)):
-            TargetID = PerformanceDF.loc[(PerformanceDF['mean'] == predDF[col+"_mean"][x]) & 
-                                         (PerformanceDF['var'] == predDF[col+"_var"][x])&                     
-                                         (PerformanceDF['col']==col)].index
-            flag = 0
-            for id in TargetID:
-                if id in orgDF[col[:-1]][orgDF["id"].tolist().index(id)]:
-                    flag = 1
-            hit = hit + flag
-            count +=1
+            if np.isnan(df_complete_sampled[col+"_mean"][x]):
+                TargetID = PerformanceDF.loc[(PerformanceDF['mean'] < predDF[col+"_mean"][x]+16209729.94) & 
+                                             (PerformanceDF['mean'] > predDF[col+"_mean"][x]-16209729.94) &
+                                             (PerformanceDF['var'] < predDF[col+"_var"][x]+6707054291177210)&
+                                             (PerformanceDF['var'] > predDF[col+"_var"][x]-6707054291177210)&
+                                             (PerformanceDF['col']==col[:-1])]["id"]
+                flag = 0
+                for id in TargetID:
+                    cell = orgDF["id"].tolist().index(predDF["id0"][x])
+                    if id in orgDF[col[:-1]][cell]:
+                        flag = 1
+                hit = hit + flag
+                count +=1
     return hit / count
 
 
@@ -164,9 +166,9 @@ def PredictingMethodVerfication(df_complete, missing_rate_list,std_scale_fullset
     df_complete_sampled = tup[1]
     tar_miss_rate = missing_rate_list[i]
 
-    rmsDict = pd.DataFrame(columns=['KNN', 'IterativeImputer', 'SoftImpute','mean','median','most_frequent'],index=[tar_miss_rate])
-    rmsAllDict = pd.DataFrame(columns=['KNN', 'IterativeImputer', 'SoftImpute','mean','median','most_frequent'],index=[tar_miss_rate])
-    hitDict = pd.DataFrame(columns=['KNN', 'IterativeImputer', 'SoftImpute','mean','median','most_frequent'],index=[tar_miss_rate])
+    rmsDict = pd.DataFrame(columns=['KNN', 'IterativeImputer', 'SoftImpute','mean','median','most_frequent','constant'],index=[tar_miss_rate])
+    rmsAllDict = pd.DataFrame(columns=['KNN', 'IterativeImputer', 'SoftImpute','mean','median','most_frequent','constant'],index=[tar_miss_rate])
+    hitDict = pd.DataFrame(columns=['KNN', 'IterativeImputer', 'SoftImpute','mean','median','most_frequent','constant'],index=[tar_miss_rate])
     
     rms_list = []
     rmsAll_list = []
@@ -179,7 +181,7 @@ def PredictingMethodVerfication(df_complete, missing_rate_list,std_scale_fullset
 
         rms = np.sqrt(mean_squared_error(df_predicted[col_Mse], df_complete[col_Mse]))
         rmsAll = np.sqrt(mean_squared_error(df_predicted, df_complete))
-        hit = hitRate(df_predicted, std_scale_fullset,col_Hit)
+        hit = hitRate(df_predicted, df_complete_sampled, std_scale_fullset,col_Hit)
         rms_list.append(rms)
         rmsAll_list.append(rmsAll)
         hit_list.append(hit)
@@ -196,7 +198,7 @@ def PredictingMethodVerfication(df_complete, missing_rate_list,std_scale_fullset
     df_predicted.columns  = df_complete.columns 
     rms = np.sqrt(mean_squared_error(df_predicted[col_Mse], df_complete[col_Mse]))
     rmsAll = np.sqrt(mean_squared_error(df_predicted, df_complete))
-    hit = hitRate(df_predicted, std_scale_fullset,col_Hit)
+    hit = hitRate(df_predicted,df_complete_sampled, std_scale_fullset,col_Hit)
 
     rmsDict["IterativeImputer"][tar_miss_rate] = round(rms, 5) 
     rmsAllDict["IterativeImputer"][tar_miss_rate] = round(rmsAll, 5)
@@ -210,7 +212,7 @@ def PredictingMethodVerfication(df_complete, missing_rate_list,std_scale_fullset
     df_predicted.columns  = df_complete.columns 
     rms = np.sqrt(mean_squared_error(df_predicted[col_Mse], df_complete[col_Mse]))
     rmsAll = np.sqrt(mean_squared_error(df_predicted, df_complete))
-    hit = hitRate(df_predicted, std_scale_fullset,col_Hit)
+    hit = hitRate(df_predicted,df_complete_sampled, std_scale_fullset,col_Hit)
 
     rmsDict["SoftImpute"][tar_miss_rate] = round(rms, 5) 
     rmsAllDict["SoftImpute"][tar_miss_rate] = round(rmsAll, 5) 
@@ -221,19 +223,20 @@ def PredictingMethodVerfication(df_complete, missing_rate_list,std_scale_fullset
     # https://scikit-learn.org/stable/modules/impute.html#impute
     from sklearn.impute import SimpleImputer
 
-    for stra in ['mean','median','most_frequent']:
+    for stra in ['mean','median','most_frequent','constant']:
 
-        imp = SimpleImputer(missing_values=np.nan, strategy=stra)
+        imp = SimpleImputer(missing_values=np.nan, strategy=stra, fill_value = 0)
         imp.fit(df_complete_sampled)
         df_predicted = imp.transform(df_complete_sampled)
         df_predicted = pd.DataFrame(df_predicted)
         df_predicted.columns  = df_complete.columns
         rms = np.sqrt(mean_squared_error(df_predicted[col_Mse], df_complete[col_Mse]))
         rmsAll = np.sqrt(mean_squared_error(df_predicted, df_complete))
-        hit = hitRate(df_predicted, std_scale_fullset,col_Hit)
+        hit = hitRate(df_predicted, df_complete_sampled, std_scale_fullset,col_Hit)
 
         rmsDict[stra][tar_miss_rate] = round(rms, 5) 
         rmsAllDict[stra][tar_miss_rate] = round(rmsAll, 5) 
         hitDict[stra][tar_miss_rate] = round(hit, 5) 
+        
         
     return rmsDict, rmsAllDict,hitDict
