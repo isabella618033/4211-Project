@@ -160,38 +160,46 @@ def hitRate(predDF,df_complete_sampled, std_scale_fullset,col_Hit):
     return hit / count
 
 
+
 def PredictingMethodVerfication(df_complete, missing_rate_list,std_scale_fullset,tup):
     winsound.Beep(1800, 1000)
     i = tup[0]
     df_complete_sampled = tup[1]
     tar_miss_rate = missing_rate_list[i]
-
+    """
     rmsDict = pd.DataFrame(columns=['KNN', 'IterativeImputer', 'SoftImpute','mean','median','most_frequent','constant'],index=[tar_miss_rate])
     rmsAllDict = pd.DataFrame(columns=['KNN', 'IterativeImputer', 'SoftImpute','mean','median','most_frequent','constant'],index=[tar_miss_rate])
     hitDict = pd.DataFrame(columns=['KNN', 'IterativeImputer', 'SoftImpute','mean','median','most_frequent','constant'],index=[tar_miss_rate])
+    """
+    rmsDict = []
+    rmsAllDict = []
+    hitDict = []
     
     rms_list = []
     rmsAll_list = []
     hit_list = []
 
-    for k in range(5):
+    for k in range(2):
         df_predicted = pd.DataFrame(KNN(k,verbose=False).fit_transform(df_complete_sampled))
         
         df_predicted.columns  = df_complete.columns 
 
         rms = np.sqrt(mean_squared_error(df_predicted[col_Mse], df_complete[col_Mse]))
         rmsAll = np.sqrt(mean_squared_error(df_predicted, df_complete))
-        hit = hitRate(df_predicted, df_complete_sampled, std_scale_fullset,col_Hit)
+        hit = 0
+        #hit = hitRate(df_predicted, df_complete_sampled, std_scale_fullset,col_Hit)
         rms_list.append(rms)
         rmsAll_list.append(rmsAll)
         hit_list.append(hit)
 
-    rmsDict["KNN"][tar_miss_rate] = round(min(rms_list), 5) 
-    rmsAllDict["KNN"][tar_miss_rate] = round(min(rmsAll_list), 5) 
-    hitDict["KNN"][tar_miss_rate] = round(max(hit_list), 5) 
-
+    rmsDict.append(round(min(rms_list), 5)) 
+    rmsAllDict.append(round(min(rmsAll_list), 5)) 
+    hitDict.append(round(max(hit_list), 5)) 
+    
+    return rmsDict #, rmsAllDict, hitDict
+    
     # Prediction with IterativeImputer (MICE)
-
+    """
     from fancyimpute import IterativeImputer 
 
     df_predicted = pd.DataFrame(IterativeImputer(verbose=False).fit_transform(df_complete_sampled))
@@ -238,5 +246,4 @@ def PredictingMethodVerfication(df_complete, missing_rate_list,std_scale_fullset
         rmsAllDict[stra][tar_miss_rate] = round(rmsAll, 5) 
         hitDict[stra][tar_miss_rate] = round(hit, 5) 
         
-        
-    return rmsDict, rmsAllDict,hitDict
+        """
